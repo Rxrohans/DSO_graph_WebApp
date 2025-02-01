@@ -78,9 +78,27 @@ def main():
                 ax.grid(True, linestyle="--", linewidth=0.5)
                 
                 st.pyplot(fig)
-            
-        # Add a footer at the bottom
-        st.markdown("---")  # Horizontal line for separation
-        st.markdown("📌 **This app was created for analyzing DSO data\n for queries - rohans.dmvt@gmail.com **")         
+# Footer Section
+    st.markdown(
+        """
+        <style>
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: gray;
+            background-color: white;
+            padding: 5px;
+            font-weight: bold;
+        }
+        </style>
+        <div class="footer">
+            🚀 Built for DSO voltage graphs | Contact: rohans.dmvt@gmail.com
+        </div>
+        """,
+        unsafe_allow_html=True
+    )        
 if __name__ == "__main__":
     main()
