@@ -77,6 +77,9 @@ def main():
                 ax.grid(True, linestyle="--", linewidth=0.5)
                 
                 st.pyplot(fig)
+                # Add a footer at the bottom
+                st.markdown("---")  # Horizontal line for separation
+                st.markdown("📌 **This app was created for analyzing DSO data\n for queries - rohans.dmvt@gmail.com **")
                 
 if __name__ == "__main__":
     main()
