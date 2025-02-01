@@ -47,6 +47,7 @@ def main():
 
     uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
     
+    
     if uploaded_file:
         apply_filter = st.checkbox("Apply Low-Pass Filter")
         cutoff_frequency = 50  # Default cutoff frequency
@@ -77,9 +78,9 @@ def main():
                 ax.grid(True, linestyle="--", linewidth=0.5)
                 
                 st.pyplot(fig)
-                # Add a footer at the bottom
-                st.markdown("---")  # Horizontal line for separation
-                st.markdown("📌 **This app was created for analyzing DSO data\n for queries - rohans.dmvt@gmail.com **")
-                
+            
+        # Add a footer at the bottom
+        st.markdown("---")  # Horizontal line for separation
+        st.markdown("📌 **This app was created for analyzing DSO data\n for queries - rohans.dmvt@gmail.com **")         
 if __name__ == "__main__":
     main()
