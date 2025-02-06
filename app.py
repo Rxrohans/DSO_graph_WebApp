@@ -42,7 +42,6 @@ def peak_to_peak(voltage):
 def annotate_peak(ax, signal):
     p2p = peak_to_peak(signal)
     txt = f"Peak-to-Peak: {p2p:.2f} mV"
-    # Place the annotation in the upper right corner of the plot
     ax.text(0.98, 0.95, txt, transform=ax.transAxes,
             fontsize=10, verticalalignment='top', horizontalalignment='right',
             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -73,7 +72,7 @@ def main():
                 if time1 is None:
                     return
 
-                # Make sure both files have the same length
+                # Ensure both files have the same length
                 min_len = min(len(time1), len(time2))
                 time = time1[:min_len]
                 noise_signal = noise_signal[:min_len]
@@ -82,7 +81,7 @@ def main():
                     filtered_noise = filtered_noise[:min_len] if filtered_noise is not None else None
                     filtered_tapping = filtered_tapping[:min_len] if filtered_tapping is not None else None
 
-                # Calculate the actual signal (tapping signal minus noise)
+                # Calculate the extracted signal (signal with noise removed)
                 actual_signal = tapping_signal - noise_signal
                 if apply_filter and (filtered_noise is not None and filtered_tapping is not None):
                     actual_filtered = filtered_tapping - filtered_noise
@@ -110,25 +109,25 @@ def main():
                 combined = np.concatenate((noise_signal, tapping_signal))
                 y_min, y_max = np.min(combined), np.max(combined)
                 
-                # Plot Noise Signal
+                # Plot Noise Signal with common axis
                 fig1, ax1 = plt.subplots(figsize=(10, 6))
                 ax1.plot(time, noise_signal, label="Noise Signal (Without Tapping)", color="blue", alpha=0.7)
                 ax1.set_title("Noise Signal")
                 ax1.set_xlabel("Time (s)")
                 ax1.set_ylabel("Voltage (mV)")
-                ax1.set_ylim(y_min, y_max)  # Set common y-axis limits
+                ax1.set_ylim(y_min, y_max)
                 ax1.legend()
                 ax1.grid(True)
                 annotate_peak(ax1, noise_signal)
                 st.pyplot(fig1)
                 
-                # Plot Signal with Tapping
+                # Plot Signal with Tapping with common axis
                 fig2, ax2 = plt.subplots(figsize=(10, 6))
                 ax2.plot(time, tapping_signal, label="Signal with Tapping", color="green", alpha=0.7)
                 ax2.set_title("Signal with Tapping")
                 ax2.set_xlabel("Time (s)")
                 ax2.set_ylabel("Voltage (mV)")
-                ax2.set_ylim(y_min, y_max)  # Set common y-axis limits
+                ax2.set_ylim(y_min, y_max)
                 ax2.legend()
                 ax2.grid(True)
                 annotate_peak(ax2, tapping_signal)
@@ -136,7 +135,7 @@ def main():
                 
                 # Plot Extracted (Actual) Signal
                 fig3, ax3 = plt.subplots(figsize=(10, 6))
-                ax3.plot(time, actual_signal, label="Actual Signal (Tapping Only, Raw)", color="black", alpha=0.7)
+                ax3.plot(time, actual_signal, label="Extracted Signal (Noise Removed)", color="black", alpha=0.7)
                 ax3.set_title("Extracted Tapping Signal (Noise Removed)")
                 ax3.set_xlabel("Time (s)")
                 ax3.set_ylabel("Voltage (mV)")
@@ -145,10 +144,21 @@ def main():
                 annotate_peak(ax3, actual_signal)
                 st.pyplot(fig3)
                 
+                # Overlay plot: Compare Signal with Tapping vs. Extracted Signal
+                fig_overlay, ax_overlay = plt.subplots(figsize=(10, 6))
+                ax_overlay.plot(time, tapping_signal, label="Signal with Tapping", color="green", alpha=0.7)
+                ax_overlay.plot(time, actual_signal, label="Extracted Signal", color="black", alpha=0.7)
+                ax_overlay.set_title("Comparison: Signal with Tapping vs. Noise-Removed Signal")
+                ax_overlay.set_xlabel("Time (s)")
+                ax_overlay.set_ylabel("Voltage (mV)")
+                ax_overlay.legend()
+                ax_overlay.grid(True)
+                st.pyplot(fig_overlay)
+                
                 # Plot Filtered Extracted Signal if low-pass filter is applied
                 if apply_filter:
                     fig4, ax4 = plt.subplots(figsize=(10, 6))
-                    ax4.plot(time, actual_filtered, label="Actual Signal (Tapping Only, Filtered)", color="orange", alpha=0.7)
+                    ax4.plot(time, actual_filtered, label="Extracted Signal (Filtered)", color="orange", alpha=0.7)
                     ax4.set_title("Filtered Extracted Tapping Signal")
                     ax4.set_xlabel("Time (s)")
                     ax4.set_ylabel("Voltage (mV)")
@@ -197,4 +207,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
