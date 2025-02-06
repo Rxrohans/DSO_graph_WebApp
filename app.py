@@ -34,57 +34,95 @@ def process_csv(file, apply_filter, cutoff_frequency):
     if apply_filter:
         filtered_voltage = butter_lowpass_filter(voltage_data, cutoff_frequency, sampling_rate)
     
-    # Create updated DataFrame
-    updated_df = pd.DataFrame({"Time (s)": time_array, "Raw Voltage (mV)": voltage_data})
-    if apply_filter:
-        updated_df["Filtered Voltage (mV)"] = filtered_voltage
-    
-    return updated_df, time_array, voltage_data, filtered_voltage
+    return time_array, voltage_data, filtered_voltage, sampling_rate
+
+def peak_to_peak(voltage):
+    return np.max(voltage) - np.min(voltage) if voltage is not None else None
 
 def main():
-    st.title("CSV Voltage Analyzer")
-    st.write("Upload your CSV file to process and visualize voltage data.")
+    st.title("CSV Voltage Analyzer with Signal Subtraction")
+    st.write("Upload two CSV files to compare waveforms and analyze signals.")
 
-    uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
+    file1 = st.file_uploader("Upload First CSV File", type=["csv"])
+    file2 = st.file_uploader("Upload Second CSV File", type=["csv"])
+
+    apply_filter = st.checkbox("Apply Low-Pass Filter")
+    cutoff_frequency = 50  # Default cutoff frequency
     
-    
-    if uploaded_file:
-        apply_filter = st.checkbox("Apply Low-Pass Filter")
-        cutoff_frequency = 50  # Default cutoff frequency
-        
-        if apply_filter:
-            cutoff_frequency = st.number_input("Enter Cutoff Frequency (Hz)", min_value=1, max_value=1000, value=50)
-        
+    if apply_filter:
+        cutoff_frequency = st.number_input("Enter Cutoff Frequency (Hz)", min_value=1, max_value=1000, value=50)
+
+    if file1 and file2:
         with st.spinner("Processing..."):
-            updated_df, time_array, voltage_data, filtered_voltage = process_csv(uploaded_file, apply_filter, cutoff_frequency)
+            time1, voltage1, filtered1, sr1 = process_csv(file1, apply_filter, cutoff_frequency)
+            time2, voltage2, filtered2, sr2 = process_csv(file2, apply_filter, cutoff_frequency)
             
-            if updated_df is not None:
-                # Download updated CSV
-                csv_buffer = BytesIO()
-                updated_df.to_csv(csv_buffer, index=False)
-                st.download_button("Download Updated CSV", csv_buffer.getvalue(), "updated_data.csv", "text/csv")
-                
-                # Plot the graph
-                fig, ax = plt.subplots(figsize=(10, 5))
-                ax.plot(time_array, voltage_data, label="Raw Voltage (mV)", color="blue", linewidth=1, alpha=0.6)
-                
-                if apply_filter:
-                    ax.plot(time_array, filtered_voltage, label="Filtered Voltage (mV)", color="red", linewidth=1.5)
-                
-                ax.set_title("Voltage vs Time", fontsize=14)
-                ax.set_xlabel("Time (s)", fontsize=12)
-                ax.set_ylabel("Voltage (mV)", fontsize=12)
-                ax.legend()
-                ax.grid(True, linestyle="--", linewidth=0.5)
-                
-                st.pyplot(fig)
-# Footer Section (Non-fixed position to avoid layout issues)
-    st.markdown("""
-        ---
-        <div style="text-align: center; font-size: 14px; color: gray; padding-top: 10px;">
-            🚀 Built for DSO voltage graphs | for queries contact: rohans.dmvt@gmail.com
-        </div>
-    """, unsafe_allow_html=True)
+            if time1 is None or time2 is None:
+                return
+            
+            # Ensure time arrays match
+            min_len = min(len(time1), len(time2))
+            time = time1[:min_len]
+            voltage1, voltage2 = voltage1[:min_len], voltage2[:min_len]
+            filtered1 = filtered1[:min_len] if filtered1 is not None else None
+            filtered2 = filtered2[:min_len] if filtered2 is not None else None
+            
+            # Subtract waveforms
+            subtracted_voltage = voltage1 - voltage2
+            subtracted_filtered = filtered1 - filtered2 if filtered1 is not None and filtered2 is not None else None
+
+            # Calculate peak-to-peak values
+            ptp_voltage1 = peak_to_peak(voltage1)
+            ptp_voltage2 = peak_to_peak(voltage2)
+            ptp_filtered1 = peak_to_peak(filtered1)
+            ptp_filtered2 = peak_to_peak(filtered2)
+            ptp_subtracted = peak_to_peak(subtracted_voltage)
+            ptp_subtracted_filtered = peak_to_peak(subtracted_filtered)
+
+            # Display peak-to-peak values
+            st.markdown(f"### **Peak-to-Peak Voltages**")
+            st.write(f"- **File 1 (Raw):** {ptp_voltage1:.2f} mV")
+            st.write(f"- **File 2 (Raw):** {ptp_voltage2:.2f} mV")
+            if apply_filter:
+                st.write(f"- **File 1 (Filtered):** {ptp_filtered1:.2f} mV")
+                st.write(f"- **File 2 (Filtered):** {ptp_filtered2:.2f} mV")
+            st.write(f"- **Subtracted Signal (Raw):** {ptp_subtracted:.2f} mV")
+            if apply_filter:
+                st.write(f"- **Subtracted Signal (Filtered):** {ptp_subtracted_filtered:.2f} mV")
+
+            # Plotting graphs
+            fig, axs = plt.subplots(3, 1, figsize=(10, 12))
+
+            # Raw signals
+            axs[0].plot(time, voltage1, label="File 1 - Raw", color="blue", alpha=0.7)
+            axs[0].plot(time, voltage2, label="File 2 - Raw", color="green", alpha=0.7)
+            axs[0].set_title("Raw Voltage Signals")
+            axs[0].set_xlabel("Time (s)")
+            axs[0].set_ylabel("Voltage (mV)")
+            axs[0].legend()
+            axs[0].grid(True)
+
+            # Filtered signals
+            if apply_filter:
+                axs[1].plot(time, filtered1, label="File 1 - Filtered", color="red", alpha=0.7)
+                axs[1].plot(time, filtered2, label="File 2 - Filtered", color="purple", alpha=0.7)
+                axs[1].set_title("Filtered Voltage Signals")
+                axs[1].set_xlabel("Time (s)")
+                axs[1].set_ylabel("Voltage (mV)")
+                axs[1].legend()
+                axs[1].grid(True)
+
+            # Subtracted signals
+            axs[2].plot(time, subtracted_voltage, label="Subtracted (Raw)", color="black", alpha=0.7)
+            if apply_filter:
+                axs[2].plot(time, subtracted_filtered, label="Subtracted (Filtered)", color="orange", alpha=0.7)
+            axs[2].set_title("Subtracted Signal")
+            axs[2].set_xlabel("Time (s)")
+            axs[2].set_ylabel("Voltage (mV)")
+            axs[2].legend()
+            axs[2].grid(True)
+
+            st.pyplot(fig)
 
 if __name__ == "__main__":
     main()
