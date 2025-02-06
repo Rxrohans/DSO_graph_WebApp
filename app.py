@@ -18,7 +18,7 @@ def process_csv(file, apply_filter, cutoff_frequency):
     try:
         sampling_rate = float(data.iloc[1, 0].split(":")[1].strip("kSa/s")) * 1000
         num_points = int(data.iloc[5, 0].split(":")[1].strip())
-    except:
+    except Exception as e:
         st.error("Invalid file format! Make sure it follows the expected structure.")
         return None, None, None, None
 
@@ -36,10 +36,21 @@ def process_csv(file, apply_filter, cutoff_frequency):
     
     return time_array, voltage_data, filtered_voltage, sampling_rate
 
+def peak_to_peak(voltage):
+    return np.max(voltage) - np.min(voltage) if voltage is not None else None
+
+def annotate_peak(ax, signal):
+    p2p = peak_to_peak(signal)
+    txt = f"Peak-to-Peak: {p2p:.2f} mV"
+    # Place the annotation in the upper right corner of the plot
+    ax.text(0.98, 0.95, txt, transform=ax.transAxes,
+            fontsize=10, verticalalignment='top', horizontalalignment='right',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
 def main():
     st.title("Tapping Signal Analyzer")
     st.write("Upload one or two CSV files to analyze the voltage signal.")
-    
+
     # File uploads
     file1 = st.file_uploader("Upload Noise Signal (Without Tapping) CSV (Optional)", type=["csv"])
     file2 = st.file_uploader("Upload Signal (With Tapping) CSV", type=["csv"])
@@ -91,49 +102,60 @@ def main():
                     updated_data["Filtered Extracted Signal (mV)"] = actual_filtered
                 updated_df = pd.DataFrame(updated_data)
                 
-                # Download button
                 csv_buffer = BytesIO()
                 updated_df.to_csv(csv_buffer, index=False)
                 st.download_button("Download Updated CSV", csv_buffer.getvalue(), "updated_data.csv", "text/csv")
                 
-                # Determine number of subplots: 3 (without filter) or 4 (with filter)
-                num_plots = 4 if apply_filter else 3
-                fig, axs = plt.subplots(num_plots, 1, figsize=(10, 4*num_plots))
+                # Determine common y-axis limits for noise and tapping signal graphs
+                combined = np.concatenate((noise_signal, tapping_signal))
+                y_min, y_max = np.min(combined), np.max(combined)
                 
                 # Plot Noise Signal
-                axs[0].plot(time, noise_signal, label="Noise Signal (Without Tapping)", color="blue", alpha=0.7)
-                axs[0].set_title("Noise Signal")
-                axs[0].set_xlabel("Time (s)")
-                axs[0].set_ylabel("Voltage (mV)")
-                axs[0].legend()
-                axs[0].grid(True)
+                fig1, ax1 = plt.subplots(figsize=(10, 6))
+                ax1.plot(time, noise_signal, label="Noise Signal (Without Tapping)", color="blue", alpha=0.7)
+                ax1.set_title("Noise Signal")
+                ax1.set_xlabel("Time (s)")
+                ax1.set_ylabel("Voltage (mV)")
+                ax1.set_ylim(y_min, y_max)  # Set common y-axis limits
+                ax1.legend()
+                ax1.grid(True)
+                annotate_peak(ax1, noise_signal)
+                st.pyplot(fig1)
                 
                 # Plot Signal with Tapping
-                axs[1].plot(time, tapping_signal, label="Signal with Tapping", color="green", alpha=0.7)
-                axs[1].set_title("Signal with Tapping")
-                axs[1].set_xlabel("Time (s)")
-                axs[1].set_ylabel("Voltage (mV)")
-                axs[1].legend()
-                axs[1].grid(True)
+                fig2, ax2 = plt.subplots(figsize=(10, 6))
+                ax2.plot(time, tapping_signal, label="Signal with Tapping", color="green", alpha=0.7)
+                ax2.set_title("Signal with Tapping")
+                ax2.set_xlabel("Time (s)")
+                ax2.set_ylabel("Voltage (mV)")
+                ax2.set_ylim(y_min, y_max)  # Set common y-axis limits
+                ax2.legend()
+                ax2.grid(True)
+                annotate_peak(ax2, tapping_signal)
+                st.pyplot(fig2)
                 
                 # Plot Extracted (Actual) Signal
-                axs[2].plot(time, actual_signal, label="Actual Signal (Tapping Only, Raw)", color="black", alpha=0.7)
-                axs[2].set_title("Extracted Tapping Signal (Noise Removed)")
-                axs[2].set_xlabel("Time (s)")
-                axs[2].set_ylabel("Voltage (mV)")
-                axs[2].legend()
-                axs[2].grid(True)
+                fig3, ax3 = plt.subplots(figsize=(10, 6))
+                ax3.plot(time, actual_signal, label="Actual Signal (Tapping Only, Raw)", color="black", alpha=0.7)
+                ax3.set_title("Extracted Tapping Signal (Noise Removed)")
+                ax3.set_xlabel("Time (s)")
+                ax3.set_ylabel("Voltage (mV)")
+                ax3.legend()
+                ax3.grid(True)
+                annotate_peak(ax3, actual_signal)
+                st.pyplot(fig3)
                 
                 # Plot Filtered Extracted Signal if low-pass filter is applied
                 if apply_filter:
-                    axs[3].plot(time, actual_filtered, label="Actual Signal (Tapping Only, Filtered)", color="orange", alpha=0.7)
-                    axs[3].set_title("Filtered Extracted Tapping Signal")
-                    axs[3].set_xlabel("Time (s)")
-                    axs[3].set_ylabel("Voltage (mV)")
-                    axs[3].legend()
-                    axs[3].grid(True)
-                
-                st.pyplot(fig)
+                    fig4, ax4 = plt.subplots(figsize=(10, 6))
+                    ax4.plot(time, actual_filtered, label="Actual Signal (Tapping Only, Filtered)", color="orange", alpha=0.7)
+                    ax4.set_title("Filtered Extracted Tapping Signal")
+                    ax4.set_xlabel("Time (s)")
+                    ax4.set_ylabel("Voltage (mV)")
+                    ax4.legend()
+                    ax4.grid(True)
+                    annotate_peak(ax4, actual_filtered)
+                    st.pyplot(fig4)
             
             # When only signal CSV is provided
             else:
@@ -150,33 +172,29 @@ def main():
                 updated_df.to_csv(csv_buffer, index=False)
                 st.download_button("Download Updated CSV", csv_buffer.getvalue(), "updated_data.csv", "text/csv")
                 
+                # Plot Signal with Tapping
+                fig5, ax5 = plt.subplots(figsize=(10, 6))
+                ax5.plot(time2, tapping_signal, label="Signal with Tapping", color="green", alpha=0.7)
+                ax5.set_title("Signal with Tapping")
+                ax5.set_xlabel("Time (s)")
+                ax5.set_ylabel("Voltage (mV)")
+                ax5.legend()
+                ax5.grid(True)
+                annotate_peak(ax5, tapping_signal)
+                st.pyplot(fig5)
+                
+                # Plot Filtered Signal with Tapping if filter is applied
                 if apply_filter:
-                    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-                    # Plot Signal with Tapping (Raw)
-                    axs[0].plot(time2, tapping_signal, label="Signal with Tapping", color="green", alpha=0.7)
-                    axs[0].set_title("Signal with Tapping")
-                    axs[0].set_xlabel("Time (s)")
-                    axs[0].set_ylabel("Voltage (mV)")
-                    axs[0].legend()
-                    axs[0].grid(True)
-                    
-                    # Plot Filtered Signal with Tapping
-                    axs[1].plot(time2, filtered_tapping, label="Filtered Signal with Tapping", color="red", alpha=0.7)
-                    axs[1].set_title("Filtered Signal with Tapping")
-                    axs[1].set_xlabel("Time (s)")
-                    axs[1].set_ylabel("Voltage (mV)")
-                    axs[1].legend()
-                    axs[1].grid(True)
-                    st.pyplot(fig)
-                else:
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    ax.plot(time2, tapping_signal, label="Signal with Tapping", color="green", alpha=0.7)
-                    ax.set_title("Signal with Tapping")
-                    ax.set_xlabel("Time (s)")
-                    ax.set_ylabel("Voltage (mV)")
-                    ax.legend()
-                    ax.grid(True)
-                    st.pyplot(fig)
+                    fig6, ax6 = plt.subplots(figsize=(10, 6))
+                    ax6.plot(time2, filtered_tapping, label="Filtered Signal with Tapping", color="red", alpha=0.7)
+                    ax6.set_title("Filtered Signal with Tapping")
+                    ax6.set_xlabel("Time (s)")
+                    ax6.set_ylabel("Voltage (mV)")
+                    ax6.legend()
+                    ax6.grid(True)
+                    annotate_peak(ax6, filtered_tapping)
+                    st.pyplot(fig6)
 
 if __name__ == "__main__":
     main()
+
