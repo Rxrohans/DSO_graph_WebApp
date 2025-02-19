@@ -79,13 +79,13 @@ def main():
 
                 st.pyplot(fig)
 # Footer Section (Non-fixed position to avoid layout issues)
-    st.markdown("""
-        ---
-        <div style="text-align: center; font-size: 14px; color: gray; padding-top: 10px;">
-            🚀 Built with ❤️ for DSO Data Analysis | Contact: rohans.dmvt@gmail.com
-            🚀 Built for DSO voltage graphs | for queries contact: rohans.dmvt@gmail.com
-        </div>
-    """, unsafe_allow_html=True)
+    #st.markdown("""
+     #   ---
+      #  <div style="text-align: center; font-size: 14px; color: gray; padding-top: 10px;">
+       #     🚀 Built with ❤️ for DSO Data Analysis | Contact: rohans.dmvt@gmail.com
+        #    🚀 Built for DSO voltage graphs | for queries contact: rohans.dmvt@gmail.com
+        #</div>
+   # """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
